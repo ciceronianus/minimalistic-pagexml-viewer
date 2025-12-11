@@ -528,6 +528,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
+            // Base path helper for GitHub Pages deployments
+            const BASE_PATH = (() => {
+                const path = window.location.pathname;
+                if (path.endsWith('/')) return path;
+                return path.replace(/[^\/]*$/, '');
+            })();
+            const withBase = (p = '') => {
+                const base = BASE_PATH.endsWith('/') ? BASE_PATH.slice(0, -1) : BASE_PATH;
+                const clean = p.replace(/^\//, '');
+                return `${base}/${clean}`;
+            };
+
         // State
         const state = {
             currentManuscript: null,
@@ -589,7 +601,7 @@
          */
         async function loadReadme() {
             try {
-                const response = await fetch('README.md');
+                const response = await fetch(withBase('README.md'));
                 const markdown = await response.text();
                 const html = marked.parse(markdown);
                 document.getElementById('aboutContent').innerHTML = html;
@@ -604,7 +616,7 @@
          */
         async function loadManuscripts() {
             try {
-                const response = await fetch('manuscripts.csv');
+                const response = await fetch(withBase('manuscripts.csv'));
                 const csv = await response.text();
                 const lines = csv.trim().split('\n');
                 
@@ -679,7 +691,7 @@
          * Load and parse METS.xml
          */
         async function loadMets(folderName) {
-            const metsUrl = `manuscripts/${folderName}/mets.xml`;
+            const metsUrl = withBase(`manuscripts/${folderName}/mets.xml`);
             const response = await fetch(metsUrl);
             const xmlText = await response.text();
             const parser = new DOMParser();
@@ -866,7 +878,8 @@
                 console.log(`Setting image bounds to ${JSON.stringify(bounds)} for image ${width}x${height}`);
                 
                 // Add image overlay
-                const overlay = L.imageOverlay(`manuscripts/${state.currentManuscript}/${imagePath}`, bounds, {
+                const imageUrl = withBase(`manuscripts/${state.currentManuscript}/${imagePath}`);
+                const overlay = L.imageOverlay(imageUrl, bounds, {
                     attribution: ''
                 }).addTo(state.leafletMap);
                 
@@ -893,7 +906,7 @@
             img.onerror = () => {
                 imagePanel.innerHTML = `<div class="image-error">Failed to load image</div>`;
             };
-            img.src = `manuscripts/${state.currentManuscript}/${imagePath}`;
+            img.src = withBase(`manuscripts/${state.currentManuscript}/${imagePath}`);
         }
 
         /**
@@ -915,7 +928,7 @@
             const textContent = document.getElementById('textContent');
             
             try {
-                const response = await fetch(`manuscripts/${state.currentManuscript}/${xmlPath}`);
+                const response = await fetch(withBase(`manuscripts/${state.currentManuscript}/${xmlPath}`));
                 const xmlText = await response.text();
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
@@ -1224,7 +1237,7 @@
         }
 
         async function loadMarkdown(filePath, elementId) {
-            const response = await fetch(filePath);
+            const response = await fetch(withBase(filePath));
             const markdown = await response.text();
             document.getElementById(elementId).innerHTML = marked.parse(markdown);
         }
