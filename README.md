@@ -8,12 +8,13 @@
 - Annamária Kovács
 
 ## Team members
+WIP
 
-## Division of work
 
 ## Manuscripts
+WIP
+
 - Pulkava`s Chronicle
-    - A2
 - Chronicle of Dalimil, 
 - Cosmas of Prague
 - Silvius Piccolomini 
