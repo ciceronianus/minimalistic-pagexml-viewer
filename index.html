@@ -299,6 +299,9 @@
             overflow: hidden;
             gap: 0;
         }
+        .split-screen.stacked {
+            flex-direction: column;
+        }
 
         .image-panel {
             flex: 1;
@@ -306,6 +309,11 @@
             border-right: 1px solid #ddd;
             overflow: hidden;
             position: relative;
+        }
+        .split-screen.stacked .image-panel {
+            border-right: none;
+            border-bottom: 1px solid #ddd;
+            height: 60vh;
         }
 
         .image-panel #leaflet-map {
@@ -344,6 +352,9 @@
             overflow-y: auto;
             padding: 1.5rem;
             background: white;
+        }
+        .split-screen.stacked .text-panel {
+            height: 40vh;
         }
 
         .text-panel-content {
@@ -487,11 +498,12 @@
 
     <!-- Tab Navigation -->
     <nav class="tab-nav">
-        <button class="tab-button active" data-tab="readme">Read me</button>
-        <button class="tab-button" data-tab="guidelines">Guidelines</button>
-        <button class="tab-button" data-tab="citation">Citation</button>
-        <button class="tab-button" data-tab="library">Manuscripts</button>
+        <button class="tab-button active" data-tab="readme" id="readmeTabButton">Read me</button>
+        <button class="tab-button" data-tab="guidelines" id="guidelinesTabButton">Guidelines</button>
+        <button class="tab-button" data-tab="citation" id="citationTabButton">Citation</button>
+        <button class="tab-button" data-tab="library" id="libraryTabButton">Manuscripts</button>
         <button class="tab-button" data-tab="reader" id="readerTab" style="display: none;">Reader</button>
+        <button class="tab-button" data-tab="viewer" id="viewerTabButton" style="margin-left: auto;">Viewer</button>
     </nav>
 
     <!-- Read me Tab -->
@@ -511,6 +523,13 @@
     <!-- Citation Tab -->
     <div class="tab-content" id="citationTab">
         <div class="about-content" id="citationContent">
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Viewer Tab -->
+    <div class="tab-content" id="viewerTab">
+        <div class="about-content" id="viewerContent">
             <p>Loading...</p>
         </div>
     </div>
@@ -541,6 +560,10 @@
                     <div class="toggle-switch">
                         <input type="checkbox" id="togglePolygons" />
                         <label for="togglePolygons">Show Polygons</label>
+                    </div>
+                    <div class="toggle-switch" style="margin-left: 1rem;">
+                        <input type="checkbox" id="toggleLayout" />
+                        <label for="toggleLayout">Text under image</label>
                     </div>
                 </div>
             </div>
@@ -601,7 +624,7 @@
         };
 
         // Initialize app
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             // Tab switching
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.addEventListener('click', () => {
@@ -611,7 +634,47 @@
             });
 
             document.getElementById('togglePolygons').addEventListener('change', togglePolygons);
-            loadReadme();
+            // Layout toggle with persistence
+            const splitScreenEl = document.querySelector('.split-screen');
+            const layoutToggleEl = document.getElementById('toggleLayout');
+            const savedLayout = localStorage.getItem('viewerLayout') || 'side-by-side';
+            if (savedLayout === 'stacked') {
+                splitScreenEl.classList.add('stacked');
+                layoutToggleEl.checked = true;
+            }
+            layoutToggleEl.addEventListener('change', (e) => {
+                const stacked = e.target.checked;
+                splitScreenEl.classList.toggle('stacked', stacked);
+                localStorage.setItem('viewerLayout', stacked ? 'stacked' : 'side-by-side');
+                if (state.leafletMap) {
+                    setTimeout(() => state.leafletMap.invalidateSize(), 50);
+                }
+            });
+            // Conditionally show tabs if files exist
+            try {
+                const resp = await fetch(withBase('README.md'));
+                if (resp.ok) {
+                    loadReadme();
+                } else {
+                    document.getElementById('readmeTabButton').style.display = 'none';
+                }
+            } catch {}
+
+            try {
+                const resp = await fetch(withBase('guidelines.md'));
+                if (!resp.ok) document.getElementById('guidelinesTabButton').style.display = 'none';
+            } catch {}
+
+            try {
+                const resp = await fetch(withBase('CITATION.cff'));
+                if (!resp.ok) document.getElementById('citationTabButton').style.display = 'none';
+            } catch {}
+
+            try {
+                const resp = await fetch(withBase('viewer.md'));
+                if (!resp.ok) document.getElementById('viewerTabButton').style.display = 'none';
+            } catch {}
+
             loadManuscripts();
         });
 
@@ -641,6 +704,9 @@
                 document.getElementById('libraryTab').classList.add('active');
             } else if (tabName === 'reader') {
                 document.getElementById('readerTabContent').classList.add('active');
+            } else if (tabName === 'viewer') {
+                document.getElementById('viewerTab').classList.add('active');
+                loadViewer();
             }
         }
 
@@ -686,6 +752,21 @@
             } catch (error) {
                 console.error('Error loading citation:', error);
                 document.getElementById('citationContent').innerHTML = '<p>Error loading CITATION.cff</p>';
+            }
+        }
+
+        /**
+         * Load viewer page from viewer.md
+         */
+        async function loadViewer() {
+            try {
+                const response = await fetch(withBase('viewer.md'));
+                const markdown = await response.text();
+                const html = marked.parse(markdown);
+                document.getElementById('viewerContent').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading viewer:', error);
+                document.getElementById('viewerContent').innerHTML = '<p>Error loading viewer.md</p>';
             }
         }
 
@@ -762,6 +843,14 @@
 
             const title = state.manuscripts.find(m => m.manuscriptFolder === folderName)?.title || folderName;
             document.querySelector('.manuscript-header-title').textContent = title;
+
+            // Ensure layout toggle applies when entering reader
+            const splitScreenEl = document.querySelector('.split-screen');
+            const layoutToggleEl = document.getElementById('toggleLayout');
+            const savedLayout = localStorage.getItem('viewerLayout') || 'side-by-side';
+            const stacked = savedLayout === 'stacked';
+            splitScreenEl.classList.toggle('stacked', stacked);
+            layoutToggleEl.checked = stacked;
 
             // Load METS
             try {
@@ -987,6 +1076,15 @@
                     padding: [10, 10],
                     animate: false
                 });
+
+                // Restore saved zoom level for this manuscript
+                try {
+                    const savedZoomStr = localStorage.getItem(`zoom_${state.currentManuscript}`);
+                    const savedZoom = savedZoomStr !== null ? parseFloat(savedZoomStr) : null;
+                    if (!isNaN(savedZoom)) {
+                        state.leafletMap.setZoom(savedZoom, { animate: false });
+                    }
+                } catch {}
                 
                 // Add click handler to map to unlock highlight
                 state.leafletMap.on('click', (e) => {
@@ -995,6 +1093,13 @@
                         state.highlightLocked = false;
                         clearHighlight();
                     }
+                });
+
+                // Persist zoom level per manuscript
+                state.leafletMap.on('zoomend', () => {
+                    try {
+                        localStorage.setItem(`zoom_${state.currentManuscript}`, String(state.leafletMap.getZoom()));
+                    } catch {}
                 });
                 
                 // If polygons were requested before image loaded, render them now
