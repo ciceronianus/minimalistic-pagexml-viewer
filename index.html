@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Manuscript Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        /* Header */
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .back-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background 0.3s;
+        }
+
+        .back-button:hover {
+            background: #2980b9;
+        }
+
+        .back-button:disabled {
+            display: none;
+        }
+
+        /* Library View */
+        .library-view {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .library-view.hidden {
+            display: none;
+        }
+
+        .manuscripts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .manuscript-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .manuscript-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            border-color: #3498db;
+        }
+
+        .manuscript-card h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+        }
+
+        .manuscript-card p {
+            color: #666;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Reader View */
+        .reader-view {
+            display: none;
+            height: calc(100vh - 60px);
+            flex-direction: row;
+        }
+
+        .reader-view.active {
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: white;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+        }
+
+        .sidebar-title {
+            padding: 1rem;
+            background: #f9f9f9;
+            border-bottom: 1px solid #ddd;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.95rem;
+        }
+
+        .page-list {
+            list-style: none;
+        }
+
+        .page-item {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .page-item:hover {
+            background: #f9f9f9;
+        }
+
+        .page-item.active {
+            background: #3498db;
+            color: white;
+            font-weight: 500;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Manuscript Title Bar */
+        .manuscript-header {
+            padding: 1rem 1.5rem;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        /* Split Screen */
+        .split-screen {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 0;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #f0f0f0;
+            border-right: 1px solid #ddd;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .image-panel #leaflet-map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .image-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 4px;
+            z-index: 10;
+        }
+
+        .image-error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: #ff6b6b;
+            padding: 1rem 2rem;
+            border-radius: 4px;
+            z-index: 10;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .text-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: white;
+        }
+
+        .text-panel-content {
+            max-width: 100%;
+        }
+
+        .text-panel-content p {
+            line-height: 1.8;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        .text-loading {
+            color: #999;
+            font-style: italic;
+        }
+
+        .text-error {
+            color: #e74c3c;
+            padding: 1rem;
+            background: #ffeaea;
+            border-radius: 4px;
+        }
+
+        .no-text {
+            color: #999;
+            font-style: italic;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .split-screen {
+                flex-direction: column;
+            }
+
+            .image-panel {
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+                min-height: 40%;
+            }
+
+            .sidebar {
+                width: 200px;
+            }
+
+            .manuscripts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+        }
+
+        /* Error message */
+        .error-message {
+            background: #ffe5e5;
+            color: #c92a2a;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📚 Digital Manuscript Viewer</h1>
+        <button class="back-button" id="backBtn" disabled>← Back to Library</button>
+    </header>
+
+    <!-- Library View -->
+    <section class="library-view" id="libraryView">
+        <div id="manuscriptsContainer" class="manuscripts-grid">
+            <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">
+                <div class="spinner"></div>
+                <p style="margin-top: 1rem; color: #999;">Loading manuscripts...</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reader View -->
+    <section class="reader-view" id="readerView">
+        <aside class="sidebar">
+            <div class="sidebar-title">Pages</div>
+            <ul class="page-list" id="pageList"></ul>
+        </aside>
+        <div class="main-content">
+            <div class="manuscript-header" id="manuscriptTitle">Loading...</div>
+            <div class="split-screen">
+                <div class="image-panel">
+                    <div id="leaflet-map"></div>
+                </div>
+                <div class="text-panel">
+                    <div class="text-panel-content" id="textContent"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+        // State
+        const state = {
+            currentManuscript: null,
+            manuscripts: [],
+            metsData: null,
+            pages: [],
+            currentPageIndex: 0,
+            leafletMap: null,
+            imageLayer: null
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('backBtn').addEventListener('click', goToLibrary);
+            loadManuscripts();
+        });
+
+        /**
+         * Load manuscripts from CSV
+         */
+        async function loadManuscripts() {
+            try {
+                const response = await fetch('manuscripts.csv');
+                const csv = await response.text();
+                const lines = csv.trim().split('\n');
+                
+                // Parse CSV (skip header)
+                state.manuscripts = lines.slice(1).map(line => {
+                    const [folderName, title, description] = line.split(',').map(s => s.trim());
+                    return { folderName, title, description };
+                });
+
+                renderLibrary();
+            } catch (error) {
+                console.error('Error loading manuscripts:', error);
+                const container = document.getElementById('manuscriptsContainer');
+                container.innerHTML = `<div class="error-message">Failed to load manuscripts. Please check that manuscripts.csv exists and is properly formatted.</div>`;
+            }
+        }
+
+        /**
+         * Render library view
+         */
+        function renderLibrary() {
+            const container = document.getElementById('manuscriptsContainer');
+            container.innerHTML = state.manuscripts.map(ms => `
+                <div class="manuscript-card" data-folder="${ms.folderName}">
+                    <h3>${escapeHtml(ms.title)}</h3>
+                    <p>${escapeHtml(ms.description)}</p>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.manuscript-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const folder = card.dataset.folder;
+                    openManuscript(folder);
+                });
+            });
+        }
+
+        /**
+         * Switch to reader view
+         */
+        async function openManuscript(folderName) {
+            state.currentManuscript = folderName;
+            
+            // Update UI
+            document.getElementById('libraryView').classList.add('hidden');
+            document.getElementById('readerView').classList.add('active');
+            document.getElementById('backBtn').disabled = false;
+
+            const title = state.manuscripts.find(m => m.folderName === folderName)?.title || folderName;
+            document.getElementById('manuscriptTitle').textContent = title;
+
+            // Load METS
+            try {
+                await loadMets(folderName);
+                renderPages();
+                loadPage(0);
+            } catch (error) {
+                console.error('Error loading manuscript:', error);
+                document.getElementById('pageList').innerHTML = `<li class="error-message">Error loading manuscript</li>`;
+            }
+        }
+
+        /**
+         * Load and parse METS.xml
+         */
+        async function loadMets(folderName) {
+            const metsUrl = `manuscripts/${folderName}/mets.xml`;
+            const response = await fetch(metsUrl);
+            const xmlText = await response.text();
+            const parser = new DOMParser();
+            state.metsData = parser.parseFromString(xmlText, 'application/xml');
+
+            if (state.metsData.getElementsByTagName('parsererror').length > 0) {
+                throw new Error('Failed to parse METS.xml');
+            }
+
+            // Extract pages from METS
+            extractPages();
+        }
+
+        /**
+         * Extract page information from METS
+         */
+        function extractPages() {
+            const mets = state.metsData;
+
+            // Build file ID to href map from fileSec
+            const fileMap = {};
+            const fileGroup = mets.querySelector('mets\\:fileGrp, fileGrp');
+            
+            if (fileGroup) {
+                const files = fileGroup.querySelectorAll('mets\\:file, file');
+                files.forEach(file => {
+                    const fileId = file.getAttribute('ID');
+                    const href = file.getAttribute('xlink:href') || file.getAttribute('href');
+                    if (fileId && href) {
+                        fileMap[fileId] = href;
+                    }
+                });
+            }
+
+            // Extract physical pages
+            state.pages = [];
+            const structMap = mets.querySelector('mets\\:structMap[TYPE="PHYSICAL"], structMap[TYPE="PHYSICAL"]');
+            
+            if (structMap) {
+                const pageDivs = structMap.querySelectorAll('mets\\:div[TYPE="PAGE"], div[TYPE="PAGE"]');
+                pageDivs.forEach((pageDiv, index) => {
+                    const fptrList = pageDiv.querySelectorAll('mets\\:fptr, fptr');
+                    const pageFiles = {};
+
+                    fptrList.forEach(fptr => {
+                        const fileId = fptr.getAttribute('FILEID');
+                        const filePath = fileMap[fileId];
+                        
+                        if (filePath) {
+                            // Determine file type
+                            if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
+                                pageFiles.image = filePath;
+                            } else if (filePath.match(/\.xml$/i)) {
+                                pageFiles.text = filePath;
+                            }
+                        }
+                    });
+
+                    if (pageFiles.image || pageFiles.text) {
+                        state.pages.push({
+                            index: index + 1,
+                            image: pageFiles.image,
+                            text: pageFiles.text
+                        });
+                    }
+                });
+            }
+        }
+
+        /**
+         * Render page list in sidebar
+         */
+        function renderPages() {
+            const pageList = document.getElementById('pageList');
+            pageList.innerHTML = state.pages.map((page, idx) => `
+                <li class="page-item ${idx === 0 ? 'active' : ''}" data-index="${idx}">
+                    Page ${page.index}
+                </li>
+            `).join('');
+
+            document.querySelectorAll('.page-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const index = parseInt(item.dataset.index);
+                    loadPage(index);
+                });
+            });
+        }
+
+        /**
+         * Load and display a specific page
+         */
+        async function loadPage(index) {
+            state.currentPageIndex = index;
+            const page = state.pages[index];
+
+            if (!page) return;
+
+            // Update active page in sidebar
+            document.querySelectorAll('.page-item').forEach((item, idx) => {
+                item.classList.toggle('active', idx === index);
+            });
+
+            // Load image
+            if (page.image) {
+                loadImage(page.image);
+            } else {
+                clearImage();
+            }
+
+            // Load text
+            if (page.text) {
+                loadPageXml(page.text);
+            } else {
+                clearText();
+            }
+        }
+
+        /**
+         * Load image using Leaflet
+         */
+        function loadImage(imagePath) {
+            const imagePanel = document.querySelector('.image-panel');
+            
+            // Initialize or clear existing map
+            if (state.leafletMap) {
+                state.leafletMap.remove();
+            }
+
+            state.leafletMap = L.map('leaflet-map').setView([0, 0], 2);
+
+            // Create image overlay with proper bounds
+            const img = new Image();
+            img.onload = () => {
+                const bounds = [[0, 0], [img.height, img.width]];
+                L.imageOverlay(`manuscripts/${state.currentManuscript}/${imagePath}`, bounds).addTo(state.leafletMap);
+                state.leafletMap.fitBounds(bounds);
+            };
+            img.onerror = () => {
+                imagePanel.innerHTML = `<div class="image-error">Failed to load image</div>`;
+            };
+            img.src = `manuscripts/${state.currentManuscript}/${imagePath}`;
+        }
+
+        /**
+         * Clear image display
+         */
+        function clearImage() {
+            if (state.leafletMap) {
+                state.leafletMap.remove();
+                state.leafletMap = null;
+            }
+            const imagePanel = document.querySelector('.image-panel');
+            imagePanel.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">No image for this page</div>';
+        }
+
+        /**
+         * Load and parse PageXML
+         */
+        async function loadPageXml(xmlPath) {
+            const textContent = document.getElementById('textContent');
+            
+            try {
+                const response = await fetch(`manuscripts/${state.currentManuscript}/${xmlPath}`);
+                const xmlText = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    throw new Error('Failed to parse PageXML');
+                }
+
+                // Extract text from TextLine/Unicode
+                const textLines = [];
+                const textLineElements = xmlDoc.querySelectorAll('TextLine');
+
+                textLineElements.forEach(line => {
+                    const unicodeElement = line.querySelector('Unicode');
+                    if (unicodeElement && unicodeElement.textContent) {
+                        textLines.push(unicodeElement.textContent);
+                    }
+                });
+
+                if (textLines.length === 0) {
+                    textContent.innerHTML = '<p class="no-text">No text content found in this page</p>';
+                } else {
+                    textContent.innerHTML = textLines.map(text => `<p>${escapeHtml(text)}</p>`).join('');
+                }
+            } catch (error) {
+                console.error('Error loading PageXML:', error);
+                textContent.innerHTML = `<div class="text-error">Error loading text: ${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        /**
+         * Clear text display
+         */
+        function clearText() {
+            document.getElementById('textContent').innerHTML = '<p class="no-text">No text content available for this page</p>';
+        }
+
+        /**
+         * Return to library view
+         */
+        function goToLibrary() {
+            state.currentManuscript = null;
+            document.getElementById('libraryView').classList.remove('hidden');
+            document.getElementById('readerView').classList.remove('active');
+            document.getElementById('backBtn').disabled = true;
+
+            // Clean up
+            if (state.leafletMap) {
+                state.leafletMap.remove();
+                state.leafletMap = null;
+            }
+        }
+
+        /**
+         * Escape HTML special characters
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
