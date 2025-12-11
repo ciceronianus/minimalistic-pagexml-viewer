@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: "Digital Manuscript Viewer"
+type: software
+authors:
+  - family-names: "Your Name"
+    given-names: "Your Name"
+repository-code: "https://github.com/ciceronianus/minimalistic-pagexml-viewer"
+url: "https://github.com/ciceronianus/minimalistic-pagexml-viewer"
+abstract: "A minimalistic web-based viewer for PageXML annotated manuscript images with synchronized text transcriptions."
+keywords:
+  - manuscripts
+  - paleography
+  - PageXML
+  - OCR
+  - digital humanities
+license: MIT
+date-released: 2025-12-11
+version: 1.0.0

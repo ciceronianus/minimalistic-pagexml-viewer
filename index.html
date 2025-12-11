@@ -183,6 +183,20 @@
             font-size: 0.95rem;
         }
 
+        .manuscript-source {
+            margin-top: 0.75rem;
+        }
+
+        .manuscript-link {
+            color: #3498db;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .manuscript-link:hover {
+            text-decoration: underline;
+        }
+
         /* Reader View */
         .reader-view {
             display: flex;
@@ -468,19 +482,35 @@
 </head>
 <body>
     <header>
-        <h1>📚 Digital Manuscript Viewer</h1>
+        <h1>📚 Minimal manuscript viewer - Inspect the dataset</h1>
     </header>
 
     <!-- Tab Navigation -->
     <nav class="tab-nav">
-        <button class="tab-button active" data-tab="about">About</button>
+        <button class="tab-button active" data-tab="readme">Read me</button>
+        <button class="tab-button" data-tab="guidelines">Guidelines</button>
+        <button class="tab-button" data-tab="citation">Citation</button>
         <button class="tab-button" data-tab="library">Manuscripts</button>
         <button class="tab-button" data-tab="reader" id="readerTab" style="display: none;">Reader</button>
     </nav>
 
-    <!-- About Tab -->
-    <div class="tab-content active" id="aboutTab">
-        <div class="about-content" id="aboutContent">
+    <!-- Read me Tab -->
+    <div class="tab-content active" id="readmeTab">
+        <div class="about-content" id="readmeContent">
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Guidelines Tab -->
+    <div class="tab-content" id="guidelinesTab">
+        <div class="about-content" id="guidelinesContent">
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Citation Tab -->
+    <div class="tab-content" id="citationTab">
+        <div class="about-content" id="citationContent">
             <p>Loading...</p>
         </div>
     </div>
@@ -540,6 +570,18 @@
                 return `${base}/${clean}`;
             };
 
+            /**
+             * Build a manuscript asset path from manuscriptFolder and subpath
+             */
+            const buildManuscriptPath = (manuscript, subpath = '') => {
+                const manuscriptFolder = (manuscript?.manuscriptFolder || '').trim();
+                const clean = subpath.replace(/^\//, '');
+                if (clean) {
+                    return `${manuscriptFolder}/${clean}`.replace(/\/$/, '');
+                }
+                return manuscriptFolder;
+            };
+
         // State
         const state = {
             currentManuscript: null,
@@ -587,8 +629,14 @@
                 content.classList.remove('active');
             });
 
-            if (tabName === 'about') {
-                document.getElementById('aboutTab').classList.add('active');
+            if (tabName === 'readme') {
+                document.getElementById('readmeTab').classList.add('active');
+            } else if (tabName === 'guidelines') {
+                document.getElementById('guidelinesTab').classList.add('active');
+                loadGuidelines();
+            } else if (tabName === 'citation') {
+                document.getElementById('citationTab').classList.add('active');
+                loadCitation();
             } else if (tabName === 'library') {
                 document.getElementById('libraryTab').classList.add('active');
             } else if (tabName === 'reader') {
@@ -604,37 +652,70 @@
                 const response = await fetch(withBase('README.md'));
                 const markdown = await response.text();
                 const html = marked.parse(markdown);
-                document.getElementById('aboutContent').innerHTML = html;
+                document.getElementById('readmeContent').innerHTML = html;
             } catch (error) {
                 console.error('Error loading README:', error);
-                document.getElementById('aboutContent').innerHTML = '<p>Error loading README.md</p>';
+                document.getElementById('readmeContent').innerHTML = '<p>Error loading README.md</p>';
             }
         }
 
         /**
-         * Load manuscripts from CSV
+         * Load guidelines from guidelines.md
+         */
+        async function loadGuidelines() {
+            try {
+                const response = await fetch(withBase('guidelines.md'));
+                const markdown = await response.text();
+                const html = marked.parse(markdown);
+                document.getElementById('guidelinesContent').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading guidelines:', error);
+                document.getElementById('guidelinesContent').innerHTML = '<p>Error loading guidelines.md</p>';
+            }
+        }
+
+        /**
+         * Load citation from CITATION.cff
+         */
+        async function loadCitation() {
+            try {
+                const response = await fetch(withBase('CITATION.cff'));
+                const cff = await response.text();
+                const escaped = escapeHtml(cff);
+                document.getElementById('citationContent').innerHTML = `<pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto;">${escaped}</pre>`;
+            } catch (error) {
+                console.error('Error loading citation:', error);
+                document.getElementById('citationContent').innerHTML = '<p>Error loading CITATION.cff</p>';
+            }
+        }
+
+        /**
+         * Load manuscripts from JSON
          */
         async function loadManuscripts() {
             try {
-                const response = await fetch(withBase('manuscripts.csv'));
-                const csv = await response.text();
-                const lines = csv.trim().split('\n');
-                
-                // Parse CSV (skip header)
-                state.manuscripts = lines.slice(1)
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0)
-                    .map(line => {
-                        const [folderName, title, description] = line.split(',').map(s => s.trim());
-                        return { folderName, title, description };
-                    });
+                const response = await fetch(withBase('manuscripts.json'));
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch manuscripts.json (status ${response.status})`);
+                }
+                const data = await response.json();
+                if (!Array.isArray(data)) {
+                    throw new Error('manuscripts.json must be an array');
+                }
+
+                state.manuscripts = data.map(item => ({
+                    manuscriptFolder: (item.manuscriptFolder || '').trim(),
+                    title: (item.title || '').trim(),
+                    sourceUrl: (item.sourceUrl || '').trim(),
+                    description: (item.description || '').trim()
+                }));
 
                 console.log('Loaded manuscripts:', state.manuscripts);
                 renderLibrary();
             } catch (error) {
                 console.error('Error loading manuscripts:', error);
                 const container = document.getElementById('manuscriptsContainer');
-                container.innerHTML = `<div class="error-message">Failed to load manuscripts. Please check that manuscripts.csv exists and is properly formatted.</div>`;
+                container.innerHTML = `<div class="error-message">Failed to load manuscripts. Please check that manuscripts.json exists and is properly formatted.</div>`;
             }
         }
 
@@ -644,9 +725,10 @@
         function renderLibrary() {
             const container = document.getElementById('manuscriptsContainer');
             container.innerHTML = state.manuscripts.map(ms => `
-                <div class="manuscript-card" data-folder="${ms.folderName}">
+                <div class="manuscript-card" data-folder="${ms.manuscriptFolder}">
                     <h3>${escapeHtml(ms.title)}</h3>
                     <p>${escapeHtml(ms.description)}</p>
+                    ${ms.sourceUrl ? `<div class="manuscript-source"><a class="manuscript-link" href="${escapeHtml(ms.sourceUrl)}" target="_blank" rel="noopener">Original source</a></div>` : ''}
                 </div>
             `).join('');
 
@@ -656,6 +738,11 @@
                     const folder = card.dataset.folder;
                     openManuscript(folder);
                 });
+            });
+
+            // Prevent link clicks from triggering card navigation
+            document.querySelectorAll('.manuscript-link').forEach(link => {
+                link.addEventListener('click', (e) => e.stopPropagation());
             });
         }
 
@@ -673,7 +760,7 @@
             state.polygonsVisible = false;
             document.getElementById('togglePolygons').checked = false;
 
-            const title = state.manuscripts.find(m => m.folderName === folderName)?.title || folderName;
+            const title = state.manuscripts.find(m => m.manuscriptFolder === folderName)?.title || folderName;
             document.querySelector('.manuscript-header-title').textContent = title;
 
             // Load METS
@@ -691,7 +778,15 @@
          * Load and parse METS.xml
          */
         async function loadMets(folderName) {
-            const metsUrl = withBase(`manuscripts/${folderName}/mets.xml`);
+            state.currentManuscript = folderName;
+            const manuscript = state.manuscripts.find(m => m.manuscriptFolder === folderName);
+            if (!manuscript) {
+                console.error('Manuscript not found:', folderName);
+                return;
+            }
+            
+            const metsPath = buildManuscriptPath(manuscript, 'mets.xml');
+            const metsUrl = withBase(metsPath);
             const response = await fetch(metsUrl);
             const xmlText = await response.text();
             const parser = new DOMParser();
@@ -878,7 +973,11 @@
                 console.log(`Setting image bounds to ${JSON.stringify(bounds)} for image ${width}x${height}`);
                 
                 // Add image overlay
-                const imageUrl = withBase(`manuscripts/${state.currentManuscript}/${imagePath}`);
+                const manuscript = state.manuscripts.find(m => m.manuscriptFolder === state.currentManuscript);
+                // imagePath from METS already includes any subfolder (e.g., "p012.jpg" or "images/p012.jpg")
+                // so we build the path directly without adding ImagesSubfolder
+                const imageBasePath = buildManuscriptPath(manuscript, imagePath);
+                const imageUrl = withBase(imageBasePath);
                 const overlay = L.imageOverlay(imageUrl, bounds, {
                     attribution: ''
                 }).addTo(state.leafletMap);
@@ -906,7 +1005,10 @@
             img.onerror = () => {
                 imagePanel.innerHTML = `<div class="image-error">Failed to load image</div>`;
             };
-            img.src = withBase(`manuscripts/${state.currentManuscript}/${imagePath}`);
+            const manuscript = state.manuscripts.find(m => m.manuscriptFolder === state.currentManuscript);
+            // imagePath from METS already includes any subfolder
+            const imgBasePath = buildManuscriptPath(manuscript, imagePath);
+            img.src = withBase(imgBasePath);
         }
 
         /**
@@ -928,7 +1030,15 @@
             const textContent = document.getElementById('textContent');
             
             try {
-                const response = await fetch(withBase(`manuscripts/${state.currentManuscript}/${xmlPath}`));
+                const manuscript = state.manuscripts.find(m => m.manuscriptFolder === state.currentManuscript);
+                if (!manuscript) {
+                    throw new Error('Manuscript not found');
+                }
+                // xmlPath from METS already includes any subfolder (e.g., "page/p012.xml")
+                // so we build the path directly without adding PageXMLSubfolder
+                const xmlBasePath = buildManuscriptPath(manuscript, xmlPath);
+                console.log(`Loading PageXML from: ${xmlBasePath}`);
+                const response = await fetch(withBase(xmlBasePath));
                 const xmlText = await response.text();
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
@@ -940,24 +1050,36 @@
                 // Store XML doc for polygon rendering
                 state.currentPageXml = xmlDoc;
                 
-                // Extract page dimensions from PageXML
-                const pageElement = xmlDoc.querySelector('Page');
+                // Extract page dimensions from PageXML - handle namespaced and non-namespaced
+                let pageElement = xmlDoc.querySelector('Page');
+                if (!pageElement) {
+                    pageElement = xmlDoc.querySelector('[local-name()="Page"]');
+                }
                 if (pageElement) {
                     state.pageWidth = parseInt(pageElement.getAttribute('imageWidth')) || 0;
                     state.pageHeight = parseInt(pageElement.getAttribute('imageHeight')) || 0;
                 }
 
-                // Extract text grouped by text regions
-                const textRegions = xmlDoc.querySelectorAll('TextRegion');
+                // Extract text grouped by text regions - handle namespaced XML
+                let textRegions = xmlDoc.querySelectorAll('TextRegion');
+                if (textRegions.length === 0) {
+                    textRegions = xmlDoc.querySelectorAll('[local-name()="TextRegion"]');
+                }
                 const regionGroups = [];
 
                 textRegions.forEach((region) => {
                     const regionId = region.getAttribute('id') || 'Unknown Region';
                     const textLines = [];
-                    const lineElements = region.querySelectorAll('TextLine');
+                    let lineElements = region.querySelectorAll('TextLine');
+                    if (lineElements.length === 0) {
+                        lineElements = region.querySelectorAll('[local-name()="TextLine"]');
+                    }
 
                     lineElements.forEach((line, lineIdx) => {
-                        const unicodeElement = line.querySelector('Unicode');
+                        let unicodeElement = line.querySelector('Unicode');
+                        if (!unicodeElement) {
+                            unicodeElement = line.querySelector('[local-name()="Unicode"]');
+                        }
                         if (unicodeElement && unicodeElement.textContent) {
                             textLines.push({
                                 number: regionGroups.reduce((sum, g) => sum + g.textLines.length, 0) + lineIdx + 1,
@@ -1046,23 +1168,35 @@
             let polygonsCreated = 0;
 
             // Extract text regions and iterate through them (matching the text display logic)
-            const textRegions = state.currentPageXml.querySelectorAll('TextRegion');
+            let textRegions = state.currentPageXml.querySelectorAll('TextRegion');
+            if (textRegions.length === 0) {
+                textRegions = state.currentPageXml.querySelectorAll('[local-name()="TextRegion"]');
+            }
             console.log(`Found ${textRegions.length} text regions in PageXML`);
             
             textRegions.forEach((region, regionIdx) => {
-                const lineElements = region.querySelectorAll('TextLine');
+                let lineElements = region.querySelectorAll('TextLine');
+                if (lineElements.length === 0) {
+                    lineElements = region.querySelectorAll('[local-name()="TextLine"]');
+                }
                 console.log(`Region ${regionIdx}: Found ${lineElements.length} text lines`);
                 
                 lineElements.forEach((line, lineIdx) => {
                     // Only process lines that have text content (matching text display logic)
-                    const unicodeElement = line.querySelector('Unicode');
+                    let unicodeElement = line.querySelector('Unicode');
+                    if (!unicodeElement) {
+                        unicodeElement = line.querySelector('[local-name()="Unicode"]');
+                    }
                     if (!unicodeElement || !unicodeElement.textContent) {
                         return; // Skip lines without text
                     }
                     
                     const lineId = line.getAttribute('id') || `line_${region.getAttribute('id')}_${lineIdx}`;
                     
-                    const coordsElement = line.querySelector('Coords');
+                    let coordsElement = line.querySelector('Coords');
+                    if (!coordsElement) {
+                        coordsElement = line.querySelector('[local-name()="Coords"]');
+                    }
                     if (coordsElement) {
                         const pointsStr = coordsElement.getAttribute('points');
                         if (pointsStr && polygonsCreated === 0) {
