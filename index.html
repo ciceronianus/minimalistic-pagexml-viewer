@@ -1036,7 +1036,7 @@
             // Create map with SimpleCoRS for image coordinates
             state.leafletMap = L.map('leaflet-map', {
                 crs: L.CRS.Simple,
-                minZoom: -2,
+                minZoom: -5,
                 maxZoom: 4,
                 zoomSnap: 0.25,
                 zoomDelta: 0.25,
@@ -1077,12 +1077,14 @@
                     animate: false
                 });
 
-                // Restore saved zoom level for this manuscript
+                // Restore saved zoom level for this manuscript only if explicitly set
                 try {
-                    const savedZoomStr = localStorage.getItem(`zoom_${state.currentManuscript}`);
-                    const savedZoom = savedZoomStr !== null ? parseFloat(savedZoomStr) : null;
-                    if (!isNaN(savedZoom)) {
-                        state.leafletMap.setZoom(savedZoom, { animate: false });
+                    const savedZoomStr = localStorage.getItem(`zoom_${state.currentManuscript}_set`);
+                    if (savedZoomStr === 'true') {
+                        const savedZoom = parseFloat(localStorage.getItem(`zoom_${state.currentManuscript}`));
+                        if (!isNaN(savedZoom)) {
+                            state.leafletMap.setZoom(savedZoom, { animate: false });
+                        }
                     }
                 } catch {}
                 
@@ -1095,10 +1097,11 @@
                     }
                 });
 
-                // Persist zoom level per manuscript
+                // Persist zoom level per manuscript (mark as explicitly set)
                 state.leafletMap.on('zoomend', () => {
                     try {
                         localStorage.setItem(`zoom_${state.currentManuscript}`, String(state.leafletMap.getZoom()));
+                        localStorage.setItem(`zoom_${state.currentManuscript}_set`, 'true');
                     } catch {}
                 });
                 
@@ -1181,14 +1184,21 @@
                     }
 
                     lineElements.forEach((line, lineIdx) => {
+                        // Get Unicode element - try direct tag first, then check children
                         let unicodeElement = line.querySelector('Unicode');
                         if (!unicodeElement) {
-                            unicodeElement = line.querySelector('[local-name()="Unicode"]');
+                            // Fallback: iterate children to find Unicode element regardless of namespace
+                            for (let child of line.childNodes) {
+                                if (child.nodeType === 1 && (child.localName === 'Unicode' || child.tagName === 'Unicode')) {
+                                    unicodeElement = child;
+                                    break;
+                                }
+                            }
                         }
-                        if (unicodeElement && unicodeElement.textContent) {
+                        if (unicodeElement && unicodeElement.textContent?.trim()) {
                             textLines.push({
                                 number: regionGroups.reduce((sum, g) => sum + g.textLines.length, 0) + lineIdx + 1,
-                                text: unicodeElement.textContent,
+                                text: unicodeElement.textContent.trim(),
                                 id: line.getAttribute('id') || `line_${regionId}_${lineIdx}`
                             });
                         }
@@ -1290,9 +1300,15 @@
                     // Only process lines that have text content (matching text display logic)
                     let unicodeElement = line.querySelector('Unicode');
                     if (!unicodeElement) {
-                        unicodeElement = line.querySelector('[local-name()="Unicode"]');
+                        // Fallback: iterate children to find Unicode element regardless of namespace
+                        for (let child of line.childNodes) {
+                            if (child.nodeType === 1 && (child.localName === 'Unicode' || child.tagName === 'Unicode')) {
+                                unicodeElement = child;
+                                break;
+                            }
+                        }
                     }
-                    if (!unicodeElement || !unicodeElement.textContent) {
+                    if (!unicodeElement || !unicodeElement.textContent?.trim()) {
                         return; // Skip lines without text
                     }
                     
