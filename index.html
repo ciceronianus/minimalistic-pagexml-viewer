@@ -440,6 +440,27 @@
 
         /* Responsive */
         @media (max-width: 768px) {
+            .tab-nav {
+                flex-wrap: wrap;
+            }
+
+            .tab-button {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+                flex: 0 1 auto;
+                min-width: auto;
+                width: 33.33%;
+            }
+
+            /* Second row: Manuscripts (4th) and Viewer (6th/last) */
+            .tab-button:nth-child(n+4) {
+                width: 50%;
+            }
+
+            .tab-button:last-child {
+                margin-left: 0;
+            }
+
             .split-screen {
                 flex-direction: column;
             }
