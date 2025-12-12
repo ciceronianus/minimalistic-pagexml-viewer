@@ -1,7 +1,10 @@
 # Minimal PageXML Viewer
 
-# Sample data: Winter School: HTR of Historical Sources, 2025
+> [!NOTE]
+> Sample data: Winter School: HTR of Historical Sources, 2025
+
 # Late Medieval Latin Group 
+Sample data: Winter School: HTR of Historical Sources, 2025
 
 ## Supervisors
 - Jan Odstrčilík
