@@ -1,6 +1,7 @@
-# Winter School: HTR of Historical Sources, 2025
-# Late Medieval Latin Group 
+# Minimal PageXML Viewer
 
+# Sample data: Winter School: HTR of Historical Sources, 2025
+# Late Medieval Latin Group 
 
 ## Supervisors
 - Jan Odstrčilík
@@ -14,10 +15,6 @@ WIP
 ## Manuscripts
 WIP
 
-- Pulkava`s Chronicle
-- Chronicle of Dalimil, 
-- Cosmas of Prague
-- Silvius Piccolomini 
 
 
 
