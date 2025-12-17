@@ -1,7 +1,7 @@
 # Minimal manuscript viewer
 Created by Jan Odstrčilík, 2025
 
-V. 1.0 - Errors not only possible, but probable 
+V. 0.6 - Errors not only possible, but probable 
 
 WIP
 

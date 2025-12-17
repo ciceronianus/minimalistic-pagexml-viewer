@@ -24,11 +24,26 @@
             color: white;
             padding: 1.5rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
         header h1 {
             font-size: 1.5rem;
             font-weight: 600;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-left: auto;
         }
 
         /* Tab Navigation */
@@ -37,6 +52,118 @@
             border-bottom: 2px solid #ddd;
             display: flex;
             gap: 0;
+        }
+
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .header-sidebar-toggle {
+            display: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .header-sidebar-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .menu-overlay.visible {
+            display: block;
+        }
+
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 280px;
+            background: white;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 8px rgba(0,0,0,0.2);
+        }
+
+        .mobile-menu.visible {
+            transform: translateX(0);
+        }
+
+        .mobile-menu-header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mobile-menu-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .mobile-menu-items {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .mobile-menu-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 1rem 1.5rem;
+            border: none;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #666;
+            transition: background 0.2s;
+        }
+
+        .mobile-menu-item:hover {
+            background: #f5f5f5;
+        }
+
+        .mobile-menu-item.active {
+            background: #e3f2fd;
+            color: #2c3e50;
+            font-weight: 600;
+            border-left: 4px solid #3498db;
         }
 
         .tab-button {
@@ -211,6 +338,24 @@
             border-right: 1px solid #ddd;
             overflow-y: auto;
             box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-toggle {
+            display: none;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sidebar-toggle:hover {
+            background: #2980b9;
         }
 
         .sidebar-title {
@@ -273,24 +418,136 @@
             align-items: center;
         }
 
-        .toggle-switch {
+        .page-nav {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .nav-button {
+            background: #eef3f7;
+            border: 1px solid #d6e0ea;
+            color: #2c3e50;
+            padding: 0.5rem 0.65rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .settings-menu {
+            position: relative;
+        }
+
+        .settings-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: #eef3f7;
+            border: 1px solid #d6e0ea;
+            color: #2c3e50;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .settings-panel {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            padding: 0.75rem 0.75rem 0.5rem;
+            min-width: 230px;
+            z-index: 1500;
+            display: none;
+        }
+
+        .settings-panel.open {
+            display: block;
+        }
+
+        .settings-group {
+            margin-bottom: 0.75rem;
+        }
+
+        .settings-option {
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            padding: 0.35rem 0.25rem;
+            border-radius: 4px;
         }
 
-        .toggle-switch input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+        .settings-option:hover {
+            background: #f4f7fb;
+        }
+
+        .settings-option input {
             cursor: pointer;
         }
 
-        .toggle-switch label {
+        .settings-option label {
             cursor: pointer;
-            font-size: 0.9rem;
-            color: #666;
+            font-size: 0.95rem;
+            color: #333;
             user-select: none;
         }
+
+        .settings-note {
+            font-size: 0.8rem;
+            color: #888;
+            margin-left: 1.4rem;
+        }
+
+        /* Callouts (Obsidian-style) */
+        .callout {
+            border: 1px solid #dce4ed;
+            border-left: 4px solid #6c8ebf;
+            border-radius: 6px;
+            background: #f7f9fc;
+            margin: 1rem 0;
+            padding: 0.75rem 0.9rem;
+        }
+
+        .callout-title {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.35rem;
+        }
+
+        .callout-icon {
+            font-size: 1rem;
+        }
+
+        .callout-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        .callout-warning { border-left-color: #f39c12; background: #fff8ed; }
+        .callout-caution { border-left-color: #e67e22; background: #fff4e8; }
+        .callout-error { border-left-color: #e74c3c; background: #fff1ef; }
+        .callout-danger { border-left-color: #e74c3c; background: #fff1ef; }
+        .callout-important { border-left-color: #c0392b; background: #fff1ef; }
+        .callout-tip { border-left-color: #27ae60; background: #f1fbf5; }
+        .callout-success { border-left-color: #27ae60; background: #f1fbf5; }
+        .callout-info { border-left-color: #3498db; background: #f2f7fd; }
+        .callout-note { border-left-color: #6c8ebf; background: #f7f9fc; }
+        .callout-example { border-left-color: #8e44ad; background: #faf5ff; }
+        .callout-quote { border-left-color: #95a5a6; background: #f6f8f8; }
+
+        .desktop-only { }
 
         /* Split Screen */
         .split-screen {
@@ -301,6 +558,22 @@
         }
         .split-screen.stacked {
             flex-direction: column;
+        }
+
+        .split-screen.image-only .text-panel {
+            display: none;
+        }
+
+        .split-screen.image-only .image-panel {
+            border-right: none;
+        }
+
+        .split-screen.text-only .image-panel {
+            display: none;
+        }
+
+        .split-screen.text-only .text-panel {
+            flex: 1;
         }
 
         .image-panel {
@@ -441,24 +714,91 @@
         /* Responsive */
         @media (max-width: 768px) {
             .tab-nav {
-                flex-wrap: wrap;
+                display: none;
             }
 
-            .tab-button {
+            .menu-toggle {
+                display: block;
+            }
+
+            header {
                 padding: 0.75rem 1rem;
-                font-size: 0.9rem;
-                flex: 0 1 auto;
-                min-width: auto;
-                width: 33.33%;
+                gap: 0.5rem;
+                align-items: flex-start;
+                flex-direction: column;
             }
 
-            /* Second row: Manuscripts (4th) and Viewer (6th/last) */
-            .tab-button:nth-child(n+4) {
-                width: 50%;
+            header h1 {
+                font-size: 1rem;
+                white-space: normal;
+                line-height: 1.3;
             }
 
-            .tab-button:last-child {
+            .desktop-only {
+                display: none;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
                 margin-left: 0;
+                gap: 0.5rem;
+            }
+
+            .menu-toggle {
+                margin-left: auto;
+            }
+
+            /* Show pages button only on mobile when in reader tab */
+            body.reader-active .header-sidebar-toggle {
+                display: flex !important;
+            }
+
+            /* Mobile sidebar toggle */
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 1000;
+                transform: translateX(-100%);
+                width: 280px;
+                box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+            }
+
+            .sidebar.visible {
+                transform: translateX(0);
+            }
+
+            .sidebar-toggle {
+                display: none !important;
+            }
+
+            .manuscript-header .sidebar-toggle {
+                display: none !important;
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 999;
+            }
+
+            .sidebar-overlay.visible {
+                display: block;
+            }
+
+            header {
+                padding: 0.75rem 1rem;
+            }
+
+            header h1 {
+                font-size: 1.1rem;
             }
 
             .split-screen {
@@ -515,7 +855,35 @@
 <body>
     <header>
         <h1>📚 Minimal manuscript viewer - Inspect the dataset</h1>
+        <div class="header-actions">
+            <button class="header-sidebar-toggle" id="headerSidebarToggle" style="display: none;" aria-label="Pages">
+                <span>☰</span>
+                <span>Pages</span>
+            </button>
+            <button class="menu-toggle" id="menuToggle" aria-label="Menu">
+                <span>☰</span>
+            </button>
+        </div>
     </header>
+
+    <!-- Mobile Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <span>Menu</span>
+            <button class="mobile-menu-close" id="menuClose" aria-label="Close menu">
+                <span>✕</span>
+            </button>
+        </div>
+        <div class="mobile-menu-items" id="mobileMenuItems">
+            <button class="mobile-menu-item active" data-tab="readme">Read me</button>
+            <button class="mobile-menu-item" data-tab="guidelines">Guidelines</button>
+            <button class="mobile-menu-item" data-tab="citation">Citation</button>
+            <button class="mobile-menu-item" data-tab="library">Manuscripts</button>
+            <button class="mobile-menu-item" data-tab="reader" style="display: none;">Reader</button>
+            <button class="mobile-menu-item" data-tab="viewer">Viewer</button>
+        </div>
+    </div>
 
     <!-- Tab Navigation -->
     <nav class="tab-nav">
@@ -570,21 +938,52 @@
     <!-- Reader Tab -->
     <div class="tab-content" id="readerTabContent">
         <section class="reader-view">
-            <aside class="sidebar">
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+            <aside class="sidebar" id="sidebar">
                 <div class="sidebar-title">Pages</div>
                 <ul class="page-list" id="pageList"></ul>
             </aside>
             <div class="main-content">
             <div class="manuscript-header">
-                <div class="manuscript-header-title" id="manuscriptTitle">Loading...</div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="manuscript-header-title" id="manuscriptTitle">Loading...</div>
+                </div>
                 <div class="toggle-controls">
-                    <div class="toggle-switch">
-                        <input type="checkbox" id="togglePolygons" />
-                        <label for="togglePolygons">Show Polygons</label>
+                    <div class="page-nav">
+                        <button class="nav-button" id="prevPageButton" aria-label="Previous page" title="Previous page">&lt;</button>
+                        <button class="nav-button" id="nextPageButton" aria-label="Next page" title="Next page">&gt;</button>
                     </div>
-                    <div class="toggle-switch" style="margin-left: 1rem;">
-                        <input type="checkbox" id="toggleLayout" />
-                        <label for="toggleLayout">Text under image</label>
+                    <div class="settings-menu">
+                        <button class="settings-button" id="settingsButton" aria-label="View settings">
+                            <span aria-hidden="true">⚙</span>
+                        </button>
+                        <div class="settings-panel" id="settingsPanel">
+                            <div class="settings-group">
+                                <div class="settings-option">
+                                    <input type="radio" name="layoutMode" id="layoutImageOnly" value="image-only">
+                                    <label for="layoutImageOnly">Image only</label>
+                                </div>
+                                <div class="settings-option">
+                                    <input type="radio" name="layoutMode" id="layoutTextOnly" value="text-only">
+                                    <label for="layoutTextOnly">Text only</label>
+                                </div>
+                                <div class="settings-option desktop-only">
+                                    <input type="radio" name="layoutMode" id="layoutSideBySide" value="side-by-side">
+                                    <label for="layoutSideBySide">Image + text side by side</label>
+                                </div>
+                                <div class="settings-option">
+                                    <input type="radio" name="layoutMode" id="layoutStacked" value="stacked">
+                                    <label for="layoutStacked">Image over text</label>
+                                </div>
+                                <div class="settings-note desktop-only">Side by side is desktop only</div>
+                            </div>
+                            <div class="settings-group">
+                                <div class="settings-option">
+                                    <input type="checkbox" id="settingsPolygons">
+                                    <label for="settingsPolygons">Show polygons</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -601,6 +1000,9 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
     <script>
             // Base path helper for GitHub Pages deployments
             const BASE_PATH = (() => {
@@ -613,6 +1015,61 @@
                 const clean = p.replace(/^\//, '');
                 return `${base}/${clean}`;
             };
+
+            // Obsidian callout support
+            const CALLOUT_TYPES = {
+                note: { label: 'Note', icon: 'ℹ️' },
+                info: { label: 'Info', icon: 'ℹ️' },
+                tip: { label: 'Tip', icon: '💡' },
+                important: { label: 'Important', icon: '❗' },
+                warning: { label: 'Warning', icon: '⚠️' },
+                caution: { label: 'Caution', icon: '⚠️' },
+                danger: { label: 'Danger', icon: '⛔' },
+                error: { label: 'Error', icon: '⛔' },
+                success: { label: 'Success', icon: '✅' },
+                quote: { label: 'Quote', icon: '❞' },
+                example: { label: 'Example', icon: '📌' }
+            };
+
+            function renderMarkdownWithCallouts(markdown) {
+                const lines = markdown.split(/\r?\n/);
+                const out = [];
+
+                for (let i = 0; i < lines.length; ) {
+                    const line = lines[i];
+                    const match = line.match(/^>\s*\[!([^\]]+)\]\s*(.*)$/i);
+
+                    if (match) {
+                        const typeRaw = match[1].trim();
+                        const type = typeRaw.toLowerCase();
+                        const customTitle = match[2].trim();
+                        const meta = CALLOUT_TYPES[type] || { label: typeRaw, icon: 'ℹ️' };
+                        const bodyLines = [];
+                        i += 1;
+
+                        while (i < lines.length && /^>\s*/.test(lines[i])) {
+                            bodyLines.push(lines[i].replace(/^>\s?/, ''));
+                            i += 1;
+                        }
+
+                        const bodyMarkdown = bodyLines.join('\n');
+                        const bodyHtml = marked.parse(bodyMarkdown);
+                        const titleText = customTitle || meta.label;
+                        out.push(
+                            `<div class="callout callout-${type}">` +
+                                `<div class="callout-title"><span class="callout-icon">${meta.icon}</span><span>${escapeHtml(titleText)}</span></div>` +
+                                `<div class="callout-body">${bodyHtml}</div>` +
+                            `</div>`
+                        );
+                        continue;
+                    }
+
+                    out.push(line);
+                    i += 1;
+                }
+
+                return marked.parse(out.join('\n'));
+            }
 
             /**
              * Build a manuscript asset path from manuscriptFolder and subpath
@@ -641,8 +1098,36 @@
             imageHeight: 0,
             pageWidth: 0,
             pageHeight: 0,
-            highlightLocked: false
+            highlightLocked: false,
+            layoutMode: null
         };
+
+        const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+        const normalizeLayout = (mode) => {
+            if (mode === 'side-by-side' && isMobile()) return 'stacked';
+            return mode;
+        };
+
+        function applyLayoutMode(mode) {
+            const splitScreenEl = document.querySelector('.split-screen');
+            const layoutRadios = document.querySelectorAll('input[name="layoutMode"]');
+            if (!splitScreenEl) return;
+            const normalized = normalizeLayout(mode);
+            state.layoutMode = normalized;
+            localStorage.setItem('viewerLayoutMode', normalized);
+            splitScreenEl.classList.remove('stacked', 'image-only', 'text-only');
+            if (normalized === 'stacked') {
+                splitScreenEl.classList.add('stacked');
+            } else if (normalized === 'image-only') {
+                splitScreenEl.classList.add('image-only');
+            } else if (normalized === 'text-only') {
+                splitScreenEl.classList.add('text-only');
+            }
+            layoutRadios.forEach(r => r.checked = r.value === normalized);
+            if (state.leafletMap) {
+                setTimeout(() => state.leafletMap.invalidateSize(), 50);
+            }
+        }
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', async () => {
@@ -654,23 +1139,108 @@
                 });
             });
 
-            document.getElementById('togglePolygons').addEventListener('change', togglePolygons);
-            // Layout toggle with persistence
             const splitScreenEl = document.querySelector('.split-screen');
-            const layoutToggleEl = document.getElementById('toggleLayout');
-            const savedLayout = localStorage.getItem('viewerLayout') || 'side-by-side';
-            if (savedLayout === 'stacked') {
-                splitScreenEl.classList.add('stacked');
-                layoutToggleEl.checked = true;
-            }
-            layoutToggleEl.addEventListener('change', (e) => {
-                const stacked = e.target.checked;
-                splitScreenEl.classList.toggle('stacked', stacked);
-                localStorage.setItem('viewerLayout', stacked ? 'stacked' : 'side-by-side');
-                if (state.leafletMap) {
-                    setTimeout(() => state.leafletMap.invalidateSize(), 50);
+            const settingsButton = document.getElementById('settingsButton');
+            const settingsPanel = document.getElementById('settingsPanel');
+            const layoutRadios = document.querySelectorAll('input[name="layoutMode"]');
+            const polygonsCheckbox = document.getElementById('settingsPolygons');
+            const prevPageButton = document.getElementById('prevPageButton');
+            const nextPageButton = document.getElementById('nextPageButton');
+
+            const savedLayout = normalizeLayout(localStorage.getItem('viewerLayoutMode') || (isMobile() ? 'stacked' : 'side-by-side'));
+            applyLayoutMode(savedLayout);
+
+            layoutRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    applyLayoutMode(radio.value);
+                });
+            });
+
+            const changePage = (delta) => {
+                const nextIndex = state.currentPageIndex + delta;
+                if (nextIndex >= 0 && nextIndex < state.pages.length) {
+                    loadPage(nextIndex);
+                }
+            };
+
+            prevPageButton?.addEventListener('click', () => changePage(-1));
+            nextPageButton?.addEventListener('click', () => changePage(1));
+
+            polygonsCheckbox.addEventListener('change', (e) => togglePolygons(e.target.checked));
+
+            settingsButton.addEventListener('click', () => {
+                settingsPanel.classList.toggle('open');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!settingsPanel.contains(e.target) && !settingsButton.contains(e.target)) {
+                    settingsPanel.classList.remove('open');
                 }
             });
+
+            // Sidebar toggle for mobile (now in header)
+            const headerSidebarToggle = document.getElementById('headerSidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            
+            if (headerSidebarToggle) {
+                headerSidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('visible');
+                    sidebarOverlay.classList.toggle('visible');
+                });
+            }
+            
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('visible');
+                sidebarOverlay.classList.remove('visible');
+            });
+
+            // Mobile menu toggle
+            const menuToggle = document.getElementById('menuToggle');
+            const menuClose = document.getElementById('menuClose');
+            const mobileMenu = document.getElementById('mobileMenu');
+            const menuOverlay = document.getElementById('menuOverlay');
+            
+            const openMobileMenu = () => {
+                mobileMenu.classList.add('visible');
+                menuOverlay.classList.add('visible');
+            };
+            
+            const closeMobileMenu = () => {
+                mobileMenu.classList.remove('visible');
+                menuOverlay.classList.remove('visible');
+            };
+            
+            menuToggle.addEventListener('click', openMobileMenu);
+            menuClose.addEventListener('click', closeMobileMenu);
+            menuOverlay.addEventListener('click', closeMobileMenu);
+            
+            // Mobile menu item clicks
+            document.querySelectorAll('.mobile-menu-item').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.dataset.tab;
+                    
+                    // Use the switchTab function to handle all the tab switching logic
+                    switchTab(tab);
+                    
+                    // Close mobile menu
+                    closeMobileMenu();
+                });
+            });
+            
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('visible');
+                sidebarOverlay.classList.remove('visible');
+            });
+            
+            // Close sidebar when a page is selected on mobile
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('page-item')) {
+                    sidebar.classList.remove('visible');
+                    sidebarOverlay.classList.remove('visible');
+                }
+            });
+
             // Conditionally show tabs if files exist
             try {
                 const resp = await fetch(withBase('README.md'));
@@ -703,8 +1273,13 @@
          * Switch between tabs
          */
         function switchTab(tabName) {
-            // Update tab buttons
+            // Update desktop tab buttons
             document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabName);
+            });
+
+            // Update mobile menu items
+            document.querySelectorAll('.mobile-menu-item').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tab === tabName);
             });
 
@@ -725,9 +1300,16 @@
                 document.getElementById('libraryTab').classList.add('active');
             } else if (tabName === 'reader') {
                 document.getElementById('readerTabContent').classList.add('active');
+                // Add class to body to enable pages button on mobile
+                document.body.classList.add('reader-active');
             } else if (tabName === 'viewer') {
                 document.getElementById('viewerTab').classList.add('active');
                 loadViewer();
+            }
+            
+            // Remove reader-active class for non-reader tabs
+            if (tabName !== 'reader') {
+                document.body.classList.remove('reader-active');
             }
         }
 
@@ -738,7 +1320,7 @@
             try {
                 const response = await fetch(withBase('README.md'));
                 const markdown = await response.text();
-                const html = marked.parse(markdown);
+                const html = renderMarkdownWithCallouts(markdown);
                 document.getElementById('readmeContent').innerHTML = html;
             } catch (error) {
                 console.error('Error loading README:', error);
@@ -753,7 +1335,7 @@
             try {
                 const response = await fetch(withBase('guidelines.md'));
                 const markdown = await response.text();
-                const html = marked.parse(markdown);
+                const html = renderMarkdownWithCallouts(markdown);
                 document.getElementById('guidelinesContent').innerHTML = html;
             } catch (error) {
                 console.error('Error loading guidelines:', error);
@@ -768,8 +1350,8 @@
             try {
                 const response = await fetch(withBase('CITATION.cff'));
                 const cff = await response.text();
-                const escaped = escapeHtml(cff);
-                document.getElementById('citationContent').innerHTML = `<pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto;">${escaped}</pre>`;
+                const highlighted = hljs.highlight(cff, { language: 'yaml' }).value;
+                document.getElementById('citationContent').innerHTML = `<pre style="background: #f6f8fa; padding: 1rem; border-radius: 4px; overflow-x: auto;"><code class="hljs language-yaml">${highlighted}</code></pre>`;
             } catch (error) {
                 console.error('Error loading citation:', error);
                 document.getElementById('citationContent').innerHTML = '<p>Error loading CITATION.cff</p>';
@@ -783,7 +1365,7 @@
             try {
                 const response = await fetch(withBase('viewer.md'));
                 const markdown = await response.text();
-                const html = marked.parse(markdown);
+                const html = renderMarkdownWithCallouts(markdown);
                 document.getElementById('viewerContent').innerHTML = html;
             } catch (error) {
                 console.error('Error loading viewer:', error);
@@ -860,18 +1442,17 @@
 
             // Reset polygon toggle
             state.polygonsVisible = false;
-            document.getElementById('togglePolygons').checked = false;
+            const polygonsCheckbox = document.getElementById('settingsPolygons');
+            if (polygonsCheckbox) {
+                polygonsCheckbox.checked = false;
+            }
 
             const title = state.manuscripts.find(m => m.manuscriptFolder === folderName)?.title || folderName;
             document.querySelector('.manuscript-header-title').textContent = title;
 
-            // Ensure layout toggle applies when entering reader
-            const splitScreenEl = document.querySelector('.split-screen');
-            const layoutToggleEl = document.getElementById('toggleLayout');
-            const savedLayout = localStorage.getItem('viewerLayout') || 'side-by-side';
-            const stacked = savedLayout === 'stacked';
-            splitScreenEl.classList.toggle('stacked', stacked);
-            layoutToggleEl.checked = stacked;
+            // Ensure layout applies when entering reader
+            const savedLayout = normalizeLayout(localStorage.getItem('viewerLayoutMode') || (isMobile() ? 'stacked' : 'side-by-side'));
+            applyLayoutMode(savedLayout);
 
             // Load METS
             try {
@@ -885,7 +1466,7 @@
         }
 
         /**
-         * Load and parse METS.xml
+         * Load and parse METS.xml or fallback to mets.json
          */
         async function loadMets(folderName) {
             state.currentManuscript = folderName;
@@ -895,19 +1476,53 @@
                 return;
             }
             
-            const metsPath = buildManuscriptPath(manuscript, 'mets.xml');
-            const metsUrl = withBase(metsPath);
-            const response = await fetch(metsUrl);
-            const xmlText = await response.text();
-            const parser = new DOMParser();
-            state.metsData = parser.parseFromString(xmlText, 'application/xml');
+            // Try mets.xml first
+            const metsXmlPath = buildManuscriptPath(manuscript, 'mets.xml');
+            const metsXmlUrl = withBase(metsXmlPath);
+            
+            try {
+                const response = await fetch(metsXmlUrl);
+                if (response.ok) {
+                    // Successfully found mets.xml
+                    const xmlText = await response.text();
+                    const parser = new DOMParser();
+                    state.metsData = parser.parseFromString(xmlText, 'application/xml');
 
-            if (state.metsData.getElementsByTagName('parsererror').length > 0) {
-                throw new Error('Failed to parse METS.xml');
+                    if (state.metsData.getElementsByTagName('parsererror').length > 0) {
+                        throw new Error('Failed to parse METS.xml');
+                    }
+
+                    // Extract pages from METS
+                    extractPages();
+                    return;
+                }
+            } catch (error) {
+                console.log('mets.xml not found or failed to load, trying mets.json fallback...');
             }
-
-            // Extract pages from METS
-            extractPages();
+            
+            // Fallback to mets.json
+            const metsJsonPath = buildManuscriptPath(manuscript, 'mets.json');
+            const metsJsonUrl = withBase(metsJsonPath);
+            
+            try {
+                const response = await fetch(metsJsonUrl);
+                if (!response.ok) {
+                    throw new Error('Neither mets.xml nor mets.json found');
+                }
+                
+                const jsonData = await response.json();
+                
+                // Parse JSON format: array of {image: "path", pagexml: "path"}
+                state.pages = jsonData.map((page, index) => ({
+                    index: index + 1,
+                    image: page.image,
+                    text: page.pagexml
+                }));
+                
+                console.log(`Loaded ${state.pages.length} pages from mets.json`);
+            } catch (error) {
+                throw new Error(`Failed to load manuscript metadata: ${error.message}`);
+            }
         }
 
         /**
@@ -916,11 +1531,8 @@
         function extractPages() {
             const mets = state.metsData;
 
-            // Build file ID to href map from fileSec using namespace-aware queries
+            // Build file ID to href map from fileSec
             const fileMap = {};
-            
-            // Query all file elements (handles both namespaced and non-namespaced XML)
-            const files = mets.querySelectorAll('[ID][MIMETYPE] > [*|href], [ID][MIMETYPE] > [href]');
             
             // Fallback: manually iterate through all elements to find files and FLocat elements
             const allFiles = mets.querySelectorAll('*');
@@ -951,8 +1563,8 @@
             // Extract pages from structMap
             state.pages = [];
             
-            // Find all page divisions (looking for elements with TYPE="SINGLE_PAGE" or similar)
-            const pageDivs = mets.querySelectorAll('[ORDER][TYPE="SINGLE_PAGE"], [ORDER][TYPE="PAGE"]');
+            // Find all page divisions
+            const pageDivs = mets.querySelectorAll('[ORDER]');
             
             pageDivs.forEach((pageDiv) => {
                 const order = pageDiv.getAttribute('ORDER');
@@ -1007,6 +1619,16 @@
                     loadPage(index);
                 });
             });
+
+            updatePageNavButtons();
+        }
+
+        function updatePageNavButtons() {
+            const prevBtn = document.getElementById('prevPageButton');
+            const nextBtn = document.getElementById('nextPageButton');
+            if (!prevBtn || !nextBtn) return;
+            prevBtn.disabled = state.currentPageIndex <= 0;
+            nextBtn.disabled = state.currentPageIndex >= state.pages.length - 1;
         }
 
         /**
@@ -1026,7 +1648,10 @@
             // Clear polygons when page changes
             clearPolygons();
             state.polygonsVisible = false;
-            document.getElementById('togglePolygons').checked = false;
+            const polygonsCheckbox = document.getElementById('settingsPolygons');
+            if (polygonsCheckbox) {
+                polygonsCheckbox.checked = false;
+            }
 
             // Load image
             if (page.image) {
@@ -1041,6 +1666,8 @@
             } else {
                 clearText();
             }
+
+            updatePageNavButtons();
         }
 
         /**
@@ -1163,8 +1790,6 @@
                 if (!manuscript) {
                     throw new Error('Manuscript not found');
                 }
-                // xmlPath from METS already includes any subfolder (e.g., "page/p012.xml")
-                // so we build the path directly without adding PageXMLSubfolder
                 const xmlBasePath = buildManuscriptPath(manuscript, xmlPath);
                 console.log(`Loading PageXML from: ${xmlBasePath}`);
                 const response = await fetch(withBase(xmlBasePath));
@@ -1182,17 +1807,37 @@
                 // Extract page dimensions from PageXML - handle namespaced and non-namespaced
                 let pageElement = xmlDoc.querySelector('Page');
                 if (!pageElement) {
-                    pageElement = xmlDoc.querySelector('[local-name()="Page"]');
+                    // Try finding by tag name
+                    const pages = xmlDoc.getElementsByTagName('Page');
+                    if (pages.length === 0) {
+                        // Try with any namespace
+                        for (let elem of xmlDoc.querySelectorAll('*')) {
+                            if (elem.localName === 'Page' || elem.tagName === 'Page') {
+                                pageElement = elem;
+                                break;
+                            }
+                        }
+                    } else {
+                        pageElement = pages[0];
+                    }
                 }
                 if (pageElement) {
                     state.pageWidth = parseInt(pageElement.getAttribute('imageWidth')) || 0;
                     state.pageHeight = parseInt(pageElement.getAttribute('imageHeight')) || 0;
                 }
 
-                // Extract text grouped by text regions - handle namespaced XML
+                // Extract text grouped by text regions
                 let textRegions = xmlDoc.querySelectorAll('TextRegion');
                 if (textRegions.length === 0) {
-                    textRegions = xmlDoc.querySelectorAll('[local-name()="TextRegion"]');
+                    // Try with namespace
+                    const allElems = xmlDoc.querySelectorAll('*');
+                    const regions = [];
+                    for (let elem of allElems) {
+                        if (elem.localName === 'TextRegion' || elem.tagName === 'TextRegion') {
+                            regions.push(elem);
+                        }
+                    }
+                    textRegions = regions;
                 }
                 const regionGroups = [];
 
@@ -1201,18 +1846,31 @@
                     const textLines = [];
                     let lineElements = region.querySelectorAll('TextLine');
                     if (lineElements.length === 0) {
-                        lineElements = region.querySelectorAll('[local-name()="TextLine"]');
+                        const allElems = region.querySelectorAll('*');
+                        const lines = [];
+                        for (let elem of allElems) {
+                            if (elem.localName === 'TextLine' || elem.tagName === 'TextLine') {
+                                lines.push(elem);
+                            }
+                        }
+                        lineElements = lines;
                     }
 
                     lineElements.forEach((line, lineIdx) => {
-                        // Get Unicode element - try direct tag first, then check children
+                        // Get Unicode element
                         let unicodeElement = line.querySelector('Unicode');
                         if (!unicodeElement) {
-                            // Fallback: iterate children to find Unicode element regardless of namespace
-                            for (let child of line.childNodes) {
-                                if (child.nodeType === 1 && (child.localName === 'Unicode' || child.tagName === 'Unicode')) {
-                                    unicodeElement = child;
-                                    break;
+                            // Try finding by tag name
+                            const unicodes = line.getElementsByTagName('Unicode');
+                            if (unicodes.length > 0) {
+                                unicodeElement = unicodes[0];
+                            } else {
+                                // Try with namespace
+                                for (let elem of line.querySelectorAll('*')) {
+                                    if (elem.localName === 'Unicode' || elem.tagName === 'Unicode') {
+                                        unicodeElement = elem;
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -1277,8 +1935,8 @@
         /**
          * Toggle polygon overlay visibility
          */
-        function togglePolygons(event) {
-            state.polygonsVisible = event.target.checked;
+        function togglePolygons(checked) {
+            state.polygonsVisible = checked;
             
             if (state.polygonsVisible && state.currentPageXml) {
                 renderPolygons();
@@ -1303,29 +1961,45 @@
             const polygonColor = '#85c1e9';
             let polygonsCreated = 0;
 
-            // Extract text regions and iterate through them (matching the text display logic)
+            // Extract text regions and iterate through them
             let textRegions = state.currentPageXml.querySelectorAll('TextRegion');
             if (textRegions.length === 0) {
-                textRegions = state.currentPageXml.querySelectorAll('[local-name()="TextRegion"]');
+                // Try finding by namespace
+                const allElems = state.currentPageXml.querySelectorAll('*');
+                const regions = [];
+                for (let elem of allElems) {
+                    if (elem.localName === 'TextRegion' || elem.tagName === 'TextRegion') {
+                        regions.push(elem);
+                    }
+                }
+                textRegions = regions;
             }
             console.log(`Found ${textRegions.length} text regions in PageXML`);
             
             textRegions.forEach((region, regionIdx) => {
-                let lineElements = region.querySelectorAll('TextLine');
-                if (lineElements.length === 0) {
-                    lineElements = region.querySelectorAll('[local-name()="TextLine"]');
+                // Find TextLine elements within this region
+                const allElems = region.querySelectorAll('*');
+                const lineElements = [];
+                for (let elem of allElems) {
+                    if (elem.localName === 'TextLine' || elem.tagName === 'TextLine') {
+                        lineElements.push(elem);
+                    }
                 }
                 console.log(`Region ${regionIdx}: Found ${lineElements.length} text lines`);
                 
                 lineElements.forEach((line, lineIdx) => {
-                    // Only process lines that have text content (matching text display logic)
+                    // Only process lines that have text content
                     let unicodeElement = line.querySelector('Unicode');
                     if (!unicodeElement) {
-                        // Fallback: iterate children to find Unicode element regardless of namespace
-                        for (let child of line.childNodes) {
-                            if (child.nodeType === 1 && (child.localName === 'Unicode' || child.tagName === 'Unicode')) {
-                                unicodeElement = child;
-                                break;
+                        const unicodes = line.getElementsByTagName('Unicode');
+                        if (unicodes.length > 0) {
+                            unicodeElement = unicodes[0];
+                        } else {
+                            for (let elem of line.querySelectorAll('*')) {
+                                if (elem.localName === 'Unicode' || elem.tagName === 'Unicode') {
+                                    unicodeElement = elem;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -1335,9 +2009,15 @@
                     
                     const lineId = line.getAttribute('id') || `line_${region.getAttribute('id')}_${lineIdx}`;
                     
+                    // Find Coords element
                     let coordsElement = line.querySelector('Coords');
                     if (!coordsElement) {
-                        coordsElement = line.querySelector('[local-name()="Coords"]');
+                        for (let elem of line.querySelectorAll('*')) {
+                            if (elem.localName === 'Coords' || elem.tagName === 'Coords') {
+                                coordsElement = elem;
+                                break;
+                            }
+                        }
                     }
                     if (coordsElement) {
                         const pointsStr = coordsElement.getAttribute('points');
@@ -1511,15 +2191,6 @@
             div.textContent = text;
             return div.innerHTML;
         }
-
-        async function loadMarkdown(filePath, elementId) {
-            const response = await fetch(withBase(filePath));
-            const markdown = await response.text();
-            document.getElementById(elementId).innerHTML = marked.parse(markdown);
-        }
-        
-        // Load about.md into the about section
-        loadMarkdown('about.md', 'about-section');
     </script>
 </body>
 </html>

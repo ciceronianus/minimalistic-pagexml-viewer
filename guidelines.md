@@ -1,1 +1,1 @@
-WIP
+Place for guidelines.
