@@ -711,6 +711,27 @@
             font-style: italic;
         }
 
+        /* Footer */
+        footer {
+            background: #2c3e50;
+            color: #ecf0f1;
+            text-align: center;
+            padding: 1rem 1.5rem;
+            font-size: 0.9rem;
+            border-top: 1px solid #34495e;
+            
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 2001;
+            width: 100%;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+        }
+
+        body {
+            padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); /* ensure content not hidden behind footer */
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .tab-nav {
@@ -995,8 +1016,13 @@
                     <div class="text-panel-content" id="textContent"></div>
                 </div>
             </div>
-        </div>
+
+       
     </section>
+     </div>
+      <footer>
+        Powered by Minimal PageXML Viewer, created with AI by Jan Odstrčilík, 2025
+    </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -1500,26 +1526,87 @@
                 console.log('mets.xml not found or failed to load, trying mets.json fallback...');
             }
             
-            // Fallback to mets.json
+            // Fallback to mets.json (then mets.csv)
             const metsJsonPath = buildManuscriptPath(manuscript, 'mets.json');
             const metsJsonUrl = withBase(metsJsonPath);
-            
+
             try {
                 const response = await fetch(metsJsonUrl);
-                if (!response.ok) {
-                    throw new Error('Neither mets.xml nor mets.json found');
+                if (response.ok) {
+                    const jsonData = await response.json();
+
+                    // Parse JSON format: array of {image: "path", pagexml: "path"}
+                    state.pages = jsonData.map((page, index) => ({
+                        index: index + 1,
+                        image: page.image,
+                        text: page.pagexml
+                    }));
+
+                    console.log(`Loaded ${state.pages.length} pages from mets.json`);
+                    return;
                 }
-                
-                const jsonData = await response.json();
-                
-                // Parse JSON format: array of {image: "path", pagexml: "path"}
-                state.pages = jsonData.map((page, index) => ({
-                    index: index + 1,
-                    image: page.image,
-                    text: page.pagexml
-                }));
-                
-                console.log(`Loaded ${state.pages.length} pages from mets.json`);
+            } catch (error) {
+                console.log('mets.json not found or failed to load, trying mets.csv...', error);
+            }
+
+            // Fallback to mets.csv
+            const metsCsvPath = buildManuscriptPath(manuscript, 'mets.csv');
+            const metsCsvUrl = withBase(metsCsvPath);
+
+            try {
+                const resp = await fetch(metsCsvUrl);
+                if (!resp.ok) {
+                    throw new Error('Neither mets.xml, mets.json nor mets.csv found');
+                }
+                const csvText = await resp.text();
+                const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                if (lines.length === 0) throw new Error('Empty CSV');
+
+                // Parse CSV rows; support quoted fields
+                const parsed = lines.map(line => {
+                    const fields = [];
+                    let cur = '';
+                    let inQuotes = false;
+                    let quoteChar = null;
+                    for (let i = 0; i < line.length; i++) {
+                        const ch = line[i];
+                        if (!inQuotes && (ch === '"' || ch === '\'')) {
+                            inQuotes = true;
+                            quoteChar = ch;
+                            continue;
+                        }
+                        if (inQuotes && ch === quoteChar) {
+                            // peek next char: if another quote, it's an escaped quote
+                            if (line[i+1] === quoteChar) { cur += quoteChar; i++; continue; }
+                            inQuotes = false; quoteChar = null; continue;
+                        }
+                        if (!inQuotes && ch === ',') { fields.push(cur.trim()); cur = ''; continue; }
+                        cur += ch;
+                    }
+                    fields.push(cur.trim());
+                    return fields;
+                });
+
+                // Detect header row
+                let start = 0;
+                const firstRowLower = parsed[0].map(c => c.toLowerCase());
+                if (firstRowLower.includes('image') || firstRowLower.includes('page') || firstRowLower.includes('pagexml') || firstRowLower.includes('path')) {
+                    start = 1;
+                }
+
+                const pages = [];
+                for (let i = start; i < parsed.length; i++) {
+                    const r = parsed[i];
+                    if (!r || r.length === 0) continue;
+                    const image = r[0] || null;
+                    const pagexml = r[1] || null;
+                    pages.push({ index: pages.length + 1, image, text: pagexml });
+                }
+
+                if (pages.length === 0) throw new Error('No rows parsed from CSV');
+                state.pages = pages;
+                console.log(`Loaded ${state.pages.length} pages from mets.csv`);
+                return;
             } catch (error) {
                 throw new Error(`Failed to load manuscript metadata: ${error.message}`);
             }
@@ -2192,5 +2279,6 @@
             return div.innerHTML;
         }
     </script>
+   
 </body>
 </html>
