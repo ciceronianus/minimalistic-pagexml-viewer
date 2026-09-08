@@ -1151,7 +1151,7 @@
             }
             layoutRadios.forEach(r => r.checked = r.value === normalized);
             if (state.leafletMap) {
-                setTimeout(() => state.leafletMap.invalidateSize(), 50);
+                setTimeout(() => refitMap(), 50);
             }
         }
 
@@ -1806,10 +1806,15 @@
                     attribution: ''
                 }).addTo(state.leafletMap);
                 
-                // Fit bounds to viewport
-                state.leafletMap.fitBounds(bounds, {
-                    padding: [10, 10],
-                    animate: false
+                // Fit bounds to viewport. invalidateSize() first: the panel is
+                // still settling when the image onload fires, so Leaflet would
+                // otherwise measure a short container and leave the page cropped.
+                state.leafletMap.invalidateSize(false);
+                state.leafletMap.fitBounds(bounds, { padding: [10, 10], animate: false });
+                state.fitBounds = bounds;
+                requestAnimationFrame(() => {
+                    state.leafletMap.invalidateSize(false);
+                    state.leafletMap.fitBounds(bounds, { padding: [10, 10], animate: false });
                 });
 
                 // Restore saved zoom level for this manuscript only if explicitly set
@@ -1913,35 +1918,14 @@
                     state.pageHeight = parseInt(pageElement.getAttribute('imageHeight')) || 0;
                 }
 
-                // Extract text grouped by text regions
-                let textRegions = xmlDoc.querySelectorAll('TextRegion');
-                if (textRegions.length === 0) {
-                    // Try with namespace
-                    const allElems = xmlDoc.querySelectorAll('*');
-                    const regions = [];
-                    for (let elem of allElems) {
-                        if (elem.localName === 'TextRegion' || elem.tagName === 'TextRegion') {
-                            regions.push(elem);
-                        }
-                    }
-                    textRegions = regions;
-                }
+                // Extract text grouped by regions (TextRegion + TableCell)
+                const textRegions = collectRegions(xmlDoc);
                 const regionGroups = [];
 
                 textRegions.forEach((region) => {
                     const regionId = region.getAttribute('id') || 'Unknown Region';
                     const textLines = [];
-                    let lineElements = region.querySelectorAll('TextLine');
-                    if (lineElements.length === 0) {
-                        const allElems = region.querySelectorAll('*');
-                        const lines = [];
-                        for (let elem of allElems) {
-                            if (elem.localName === 'TextLine' || elem.tagName === 'TextLine') {
-                                lines.push(elem);
-                            }
-                        }
-                        lineElements = lines;
-                    }
+                    const lineElements = collectLines(region);
 
                     lineElements.forEach((line, lineIdx) => {
                         // Get Unicode element
@@ -1973,6 +1957,7 @@
                     if (textLines.length > 0) {
                         regionGroups.push({
                             regionId: regionId,
+                            label: regionLabel(region),
                             textLines: textLines
                         });
                     }
@@ -1982,7 +1967,7 @@
                     textContent.innerHTML = '<p class="no-text">No text content found in this page</p>';
                 } else {
                     textContent.innerHTML = regionGroups.map(group => `
-                        <div class="text-region-heading">Text region - ${escapeHtml(group.regionId)}</div>
+                        <div class="text-region-heading">${escapeHtml(group.label || group.regionId)}</div>
                         ${group.textLines.map(line => `
                             <div class="text-line" data-line-id="${escapeHtml(line.id)}">
                                 <span class="text-line-number">${line.number}</span>
@@ -2019,6 +2004,71 @@
         /**
          * Return to library view
          */
+
+
+        /** Re-measure the map and re-fit the page after a layout/size change. */
+        function refitMap() {
+            if (!state.leafletMap || !state.fitBounds) return;
+            state.leafletMap.invalidateSize(false);
+            state.leafletMap.fitBounds(state.fitBounds, { padding: [10, 10], animate: false });
+        }
+        window.addEventListener('resize', () => refitMap());
+
+        /**
+         * Collect region-like elements: TextRegion and TableCell (PAGE table cells
+         * are region-level containers and hold their own TextLine children).
+         * Namespace-safe: matches on localName.
+         */
+        function collectRegions(root) {
+            const out = [];
+            for (const elem of root.querySelectorAll('*')) {
+                const n = elem.localName || elem.tagName;
+                if (n === 'TextRegion' || n === 'TableCell') out.push(elem);
+            }
+            return out;
+        }
+
+        /** Human label for a region: table cells get row/col + structure type. */
+        function regionLabel(region) {
+            const n = region.localName || region.tagName;
+            const id = region.getAttribute('id') || 'unknown';
+            if (n !== 'TableCell') return `Text region - ${id}`;
+            const row = region.getAttribute('row'), col = region.getAttribute('col');
+            const m = /structure\s*\{[^}]*type:([^;}]+)/.exec(region.getAttribute('custom') || '');
+            const type = m ? m[1].trim() : '';
+            return `Cell r${row} c${col}${type ? ' - ' + type : ''}`;
+        }
+
+        /** All descendant TextLines of a region. */
+        function collectLines(region) {
+            const out = [];
+            for (const elem of region.querySelectorAll('*')) {
+                const n = elem.localName || elem.tagName;
+                if (n === 'TextLine') out.push(elem);
+            }
+            return out;
+        }
+
+        /** First Coords *child* of an element (not of its descendants). */
+        function ownCoords(elem) {
+            for (const c of elem.children) {
+                if ((c.localName || c.tagName) === 'Coords') return c;
+            }
+            return null;
+        }
+
+        /** Parse a PAGE points string into Leaflet [lat,lng] with Y inverted. */
+        function parsePoints(pointsStr, imageHeight) {
+            if (!pointsStr) return [];
+            return pointsStr.trim().split(/\s+/).map(p => {
+                const parts = p.split(',');
+                if (parts.length !== 2) return null;
+                const x = parseFloat(parts[0]), y = parseFloat(parts[1]);
+                if (!isFinite(x) || !isFinite(y)) return null;
+                return [imageHeight - y, x];
+            }).filter(Boolean);
+        }
+
         /**
          * Toggle polygon overlay visibility
          */
@@ -2045,142 +2095,68 @@
 
             console.log(`Rendering polygons for image ${state.imageWidth}x${state.imageHeight}, PageXML says ${state.pageWidth}x${state.pageHeight}`);
 
-            const polygonColor = '#85c1e9';
+            const LINE_COLOR = '#85c1e9';
+            // Distinct hues so adjacent columns stay separable at a glance.
+            const COL_COLORS = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c',
+                                '#3498db','#9b59b6','#e84393','#16a085','#d35400'];
             let polygonsCreated = 0;
 
-            // Extract text regions and iterate through them
-            let textRegions = state.currentPageXml.querySelectorAll('TextRegion');
-            if (textRegions.length === 0) {
-                // Try finding by namespace
-                const allElems = state.currentPageXml.querySelectorAll('*');
-                const regions = [];
-                for (let elem of allElems) {
-                    if (elem.localName === 'TextRegion' || elem.tagName === 'TextRegion') {
-                        regions.push(elem);
-                    }
-                }
-                textRegions = regions;
-            }
-            console.log(`Found ${textRegions.length} text regions in PageXML`);
-            
-            textRegions.forEach((region, regionIdx) => {
-                // Find TextLine elements within this region
-                const allElems = region.querySelectorAll('*');
-                const lineElements = [];
-                for (let elem of allElems) {
-                    if (elem.localName === 'TextLine' || elem.tagName === 'TextLine') {
-                        lineElements.push(elem);
-                    }
-                }
-                console.log(`Region ${regionIdx}: Found ${lineElements.length} text lines`);
-                
-                lineElements.forEach((line, lineIdx) => {
-                    // Only process lines that have text content
-                    let unicodeElement = line.querySelector('Unicode');
-                    if (!unicodeElement) {
-                        const unicodes = line.getElementsByTagName('Unicode');
-                        if (unicodes.length > 0) {
-                            unicodeElement = unicodes[0];
-                        } else {
-                            for (let elem of line.querySelectorAll('*')) {
-                                if (elem.localName === 'Unicode' || elem.tagName === 'Unicode') {
-                                    unicodeElement = elem;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (!unicodeElement || !unicodeElement.textContent?.trim()) {
-                        return; // Skip lines without text
-                    }
-                    
-                    const lineId = line.getAttribute('id') || `line_${region.getAttribute('id')}_${lineIdx}`;
-                    
-                    // Find Coords element
-                    let coordsElement = line.querySelector('Coords');
-                    if (!coordsElement) {
-                        for (let elem of line.querySelectorAll('*')) {
-                            if (elem.localName === 'Coords' || elem.tagName === 'Coords') {
-                                coordsElement = elem;
-                                break;
-                            }
-                        }
-                    }
-                    if (coordsElement) {
-                        const pointsStr = coordsElement.getAttribute('points');
-                        if (pointsStr && polygonsCreated === 0) {
-                            console.log(`First line points string: ${pointsStr.substring(0, 100)}...`);
-                        }
-                        if (pointsStr) {
-                            // Parse points as "x1,y1 x2,y2 x3,y3 ..."
-                            const pointsArray = pointsStr.trim().split(/\s+/);
-                        
-                            if (pointsArray.length > 0) {
-                                // Parse each point - PageXML uses x,y coordinates
-                                const points = pointsArray.map(p => {
-                                    const parts = p.split(',');
-                                    if (parts.length === 2) {
-                                        const x = parseFloat(parts[0]);
-                                        const y = parseFloat(parts[1]);
-                                        // Invert Y-axis: convert from PageXML (Y down) to Leaflet (Y up)
-                                        // Y_leaflet = pageHeight - Y_pagexml
-                                        const invertedY = state.imageHeight - y;
-                                        // Return as [lat, lng] = [y, x] for SimpleCoRS
-                                        return [invertedY, x];
-                                    }
-                                    return null;
-                                }).filter(p => p !== null);
+            const regions = collectRegions(state.currentPageXml);
+            console.log(`Found ${regions.length} regions (TextRegion + TableCell) in PageXML`);
 
-                                if (polygonsCreated === 0) {
-                                    console.log(`First line parsed ${points.length} points, first 3: ${JSON.stringify(points.slice(0, 3))}`);
-                                }
-
-                                if (points.length > 2) {
-                                    try {
-                                        const polygon = L.polygon(points, {
-                                        color: polygonColor,
-                                        weight: 2,
-                                        opacity: 1,
-                                        fillColor: polygonColor,
-                                        fillOpacity: 0.2,
-                                        className: 'text-line-polygon'
-                                    }).addTo(state.leafletMap);
-                                    
-                                    // Store line ID with polygon for highlighting
-                                    polygon.lineId = lineId;
-                                    
-                                    // Add hover and click handlers to polygon
-                                    polygon.on('mouseover', () => {
-                                        console.log(`Polygon ${lineId} mouseover, highlightLocked: ${state.highlightLocked}`);
-                                        if (!state.highlightLocked) {
-                                            highlightLineAndPolygon(lineId);
-                                        }
-                                    });
-                                    polygon.on('mouseout', () => {
-                                        console.log(`Polygon ${lineId} mouseout, highlightLocked: ${state.highlightLocked}`);
-                                        if (!state.highlightLocked) {
-                                            clearHighlight();
-                                        }
-                                    });
-                                    polygon.on('click', () => {
-                                        console.log(`Polygon ${lineId} clicked`);
-                                        state.highlightLocked = true;
-                                        highlightLineAndPolygon(lineId, false);
-                                    });
-                                    
-                                    state.polygonLayers.push(polygon);
-                                    polygonsCreated++;
-                                } catch (e) {
-                                    console.error(`Error creating polygon for line ${lineIdx}:`, e);
-                                }
-                            }
-                        }
-                    }
+            const addPoly = (points, opts, id, tooltip) => {
+                if (points.length < 3) return;
+                try {
+                    const poly = L.polygon(points, opts).addTo(state.leafletMap);
+                    poly.lineId = id;
+                    if (tooltip) poly.bindTooltip(tooltip, { sticky: true, direction: 'top' });
+                    poly.on('mouseover', () => { if (!state.highlightLocked) highlightLineAndPolygon(id); });
+                    poly.on('mouseout', () => { if (!state.highlightLocked) clearHighlight(); });
+                    poly.on('click', () => { state.highlightLocked = true; highlightLineAndPolygon(id, false); });
+                    state.polygonLayers.push(poly);
+                    polygonsCreated++;
+                } catch (e) {
+                    console.error('Error creating polygon', id, e);
                 }
+            };
+
+            regions.forEach((region) => {
+                const isCell = (region.localName || region.tagName) === 'TableCell';
+                const regionId = region.getAttribute('id') || 'region';
+
+                // Draw the cell/region outline itself. This is the key change for
+                // tabular material: cells are geometry even when they hold no text.
+                const rc = ownCoords(region);
+                if (rc) {
+                    const col = parseInt(region.getAttribute('col'), 10);
+                    const color = isCell && isFinite(col)
+                        ? COL_COLORS[col % COL_COLORS.length]
+                        : '#95a5a6';
+                    addPoly(
+                        parsePoints(rc.getAttribute('points'), state.imageHeight),
+                        { color, weight: 1, opacity: 0.9, fillColor: color,
+                          fillOpacity: 0.08, className: 'region-polygon' },
+                        regionId,
+                        regionLabel(region)
+                    );
+                }
+
+                // Draw TextLine polygons on top, as before.
+                collectLines(region).forEach((line, lineIdx) => {
+                    const lineId = line.getAttribute('id') || `line_${regionId}_${lineIdx}`;
+                    const lc = ownCoords(line);
+                    if (!lc) return;
+                    addPoly(
+                        parsePoints(lc.getAttribute('points'), state.imageHeight),
+                        { color: LINE_COLOR, weight: 2, opacity: 1, fillColor: LINE_COLOR,
+                          fillOpacity: 0.2, className: 'text-line-polygon' },
+                        lineId,
+                        regionLabel(region)
+                    );
                 });
             });
 
-            console.log(`Successfully rendered ${polygonsCreated} text line polygons`);
+            console.log(`Successfully rendered ${polygonsCreated} polygons`);
         }
 
         /**
